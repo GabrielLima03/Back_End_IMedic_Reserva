@@ -6,12 +6,13 @@ import bcrypt from "bcrypt";
 | LOGIN
 |--------------------------------------------------------------------------
 */
+
 async function login(email, senha) {
   const sql = `
     SELECT id_user, nome, email, senha
-    FROM tbl_usuario
+    FROM usuarios
     WHERE email = $1
-      AND deletado = 0
+    AND deleted_at IS NULL
   `;
 
   const result = await pool.query(sql, [email]);
@@ -36,12 +37,13 @@ async function login(email, senha) {
 | CHECK EMAIL
 |--------------------------------------------------------------------------
 */
+
 async function checkEmail(email) {
   const sql = `
     SELECT id_user
-    FROM tbl_usuario
+    FROM usuarios
     WHERE email = $1
-      AND deletado = 0
+    AND deleted_at IS NULL
   `;
 
   const result = await pool.query(sql, [email]);
@@ -53,14 +55,15 @@ async function checkEmail(email) {
 | CHANGE PASSWORD
 |--------------------------------------------------------------------------
 */
+
 async function changePassword(email, newPassword) {
   const senhaHash = await bcrypt.hash(newPassword, 10);
 
   const sql = `
-    UPDATE tbl_usuario
+    UPDATE usuarios
     SET senha = $1
     WHERE email = $2
-      AND deletado = 0
+    AND deleted_at IS NULL
   `;
 
   await pool.query(sql, [senhaHash, email]);
