@@ -1,5 +1,5 @@
 import express from "express";
-import alarmService from "../services/alarmService.js";
+import alarmService from "../services/alarmServices.js";
 import { verifyJWT } from "../middlewares/JWT.js";
 
 const router = express.Router();
