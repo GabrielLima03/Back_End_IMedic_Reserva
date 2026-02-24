@@ -5,7 +5,7 @@ export async function initDatabase() {
         console.log("🔄 Criando tabelas...");
 
         await pool.query(`
-  CREATE TABLE IF NOT EXISTS usuarios (
+  CREATE TABLE IF NOT EXISTS tbl_usuario (
     id_user SERIAL PRIMARY KEY,
     nome VARCHAR(150) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
