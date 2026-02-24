@@ -1,52 +1,103 @@
-import database from "../repository/mysql.js";
+import pool from "../repository/database.js";
 
-// Função para formatar a data para o formato MySQL
-function formatDateToMySQL(date) {
-    const d = new Date(date);
-    const pad = (n) => n.toString().padStart(2, '0');
+/*
+|--------------------------------------------------------------------------
+| CREATE
+|--------------------------------------------------------------------------
+*/
+async function createAlarme(idUser, titulo, descricao, dataHora) {
+  const dateObj = new Date(dataHora);
 
-    // Formatar para o formato: "YYYY-MM-DD HH:MM:SS"
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  if (isNaN(dateObj.getTime())) {
+    throw new Error("Data inválida");
+  }
+
+  const sql = `
+    INSERT INTO alarmes (id_user, titulo, descricao, data_hora)
+    VALUES ($1, $2, $3, $4)
+  `;
+
+  await pool.query(sql, [
+    idUser,
+    titulo,
+    descricao,
+    dateObj
+  ]);
 }
 
-// Criar alarme no banco (sem Id_user)
-export async function criarAlarme(titulo, descricao, dataHora) {
-    try {
-        // Verificar se a data fornecida é válida
-        const dateObj = new Date(dataHora);
-        if (isNaN(dateObj.getTime())) {
-            throw new Error("Data inválida");
-        }
+/*
+|--------------------------------------------------------------------------
+| READ (somente do usuário logado)
+|--------------------------------------------------------------------------
+*/
+async function listAlarmes(idUser) {
+  const sql = `
+    SELECT id, titulo, descricao, data_hora, criado_em
+    FROM alarmes
+    WHERE id_user = $1
+      AND deletado = 0
+    ORDER BY data_hora ASC
+  `;
 
-        // Formatando a data no formato MySQL
-        const dataFormatada = formatDateToMySQL(dataHora);
-
-        const sql = `
-            INSERT INTO alarmes (titulo, descricao, data_hora)
-            VALUES (?, ?, ?)
-        `;
-        const values = [titulo, descricao, dataFormatada];
-
-        const conn = await database.connectBD();
-        await conn.query(sql, values);
-        conn.end();
-    } catch (error) {
-        console.error("Erro ao criar alarme:", error);
-        throw error;  // Propaga o erro para o controller ou camada superior
-    }
+  const result = await pool.query(sql, [idUser]);
+  return result.rows;
 }
 
-// Listar todos os alarmes
-export async function listarAlarmes() {
-    const sql = `
-        SELECT id, titulo, descricao, data_hora, criado_em
-        FROM alarmes
-        ORDER BY data_hora ASC
-    `;
+/*
+|--------------------------------------------------------------------------
+| UPDATE (protegido por usuário)
+|--------------------------------------------------------------------------
+*/
+async function updateAlarme(
+  idAlarme,
+  idUser,
+  titulo,
+  descricao,
+  dataHora
+) {
+  const dateObj = new Date(dataHora);
 
-    const conn = await database.connectBD();
-    const [rows] = await conn.query(sql);
-    conn.end();
+  if (isNaN(dateObj.getTime())) {
+    throw new Error("Data inválida");
+  }
 
-    return rows;
+  const sql = `
+    UPDATE alarmes
+    SET titulo = $1,
+        descricao = $2,
+        data_hora = $3
+    WHERE id = $4
+      AND id_user = $5
+  `;
+
+  await pool.query(sql, [
+    titulo,
+    descricao,
+    dateObj,
+    idAlarme,
+    idUser
+  ]);
 }
+
+/*
+|--------------------------------------------------------------------------
+| DELETE (soft delete protegido)
+|--------------------------------------------------------------------------
+*/
+async function deleteAlarme(idAlarme, idUser) {
+  const sql = `
+    UPDATE alarmes
+    SET deletado = 1
+    WHERE id = $1
+      AND id_user = $2
+  `;
+
+  await pool.query(sql, [idAlarme, idUser]);
+}
+
+export default {
+  createAlarme,
+  listAlarmes,
+  updateAlarme,
+  deleteAlarme
+};

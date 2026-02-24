@@ -1,54 +1,131 @@
-import express, {request, response} from "express";
-import service from "../services/medicamentoService.js"
+import express from "express";
+import service from "../services/medicamentoService.js";
+import { verifyJWT } from "../middlewares/JWT.js";
 
+const router = express.Router();
 
-const route = express.Router();
+router.use(verifyJWT);
 
-//CADASTRAR - POST
-route.post("/", async (request, response) => {
-    try {
-        const { nome, apelido_comum, medida, ml_do_remedio, miligramagem_por_comprimido, quantidade_comprimidos, categoria, tarja } = request.body;
-        await service.createMedicamento(nome, apelido_comum, medida, ml_do_remedio, miligramagem_por_comprimido, quantidade_comprimidos, categoria, tarja);
-        return response.status(201).send({ "message": "Medicamento cadastrado com sucesso!" });
-    } catch (error) {
-        console.error("Erro ao cadastrar medicamento:", error);
-        return response.status(500).send({ "message": "Erro ao cadastrar medicamento." });
-    }
+/*
+|--------------------------------------------------------------------------
+| CREATE
+|--------------------------------------------------------------------------
+*/
+router.post("/", async (req, res) => {
+  const id_user = req.user.id_user;
+
+  const {
+    nome,
+    apelido_comum,
+    medida,
+    ml_do_remedio,
+    miligramagem_por_comprimido,
+    quantidade_comprimidos,
+    categoria,
+    tarja
+  } = req.body;
+
+  try {
+    await service.createMedicamento(
+      id_user,
+      nome,
+      apelido_comum,
+      medida,
+      ml_do_remedio,
+      miligramagem_por_comprimido,
+      quantidade_comprimidos,
+      categoria,
+      tarja
+    );
+
+    return res.status(201).json({
+      message: "Medicamento cadastrado com sucesso!"
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
+/*
+|--------------------------------------------------------------------------
+| READ
+|--------------------------------------------------------------------------
+*/
+router.get("/", async (req, res) => {
+  const id_user = req.user.id_user;
 
-//LISTAR - GET
-route.get("/", async (request,response) => {
-    const medicamento = await service.listMedicamento();
+  try {
+    const medicamentos = await service.listMedicamento(id_user);
+    return res.status(200).json(medicamentos);
 
-    return response.status(200).send({"message": medicamento});
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
+/*
+|--------------------------------------------------------------------------
+| UPDATE
+|--------------------------------------------------------------------------
+*/
+router.put("/:id", async (req, res) => {
+  const id_user = req.user.id_user;
+  const idMedicamento = req.params.id;
 
-//ATUALIZAR - PUT
-route.put("/:id", async (request, response) => {
-    try {
-        const {nome, apelido_comum, medida, ml_do_remedio, miligramagem_por_comprimido, quantidade_comprimidos, categoria, tarja} = request.body;
-        const { id } = request.params; 
-        await service.updateMedicamento(id, nome, apelido_comum, medida, ml_do_remedio, miligramagem_por_comprimido, quantidade_comprimidos, categoria, tarja);
+  const {
+    nome,
+    apelido_comum,
+    medida,
+    ml_do_remedio,
+    miligramagem_por_comprimido,
+    quantidade_comprimidos,
+    categoria,
+    tarja
+  } = req.body;
 
-        return response.status(200).send({ "message": "Medicamento atualizado com sucesso!" });
-    } catch (error) {
-        console.error("Erro ao atualizar medicamento:", error);
-        return response.status(500).send({ "message": "Erro ao atualizar medicamento." });
-    }
+  try {
+    await service.updateMedicamento(
+      idMedicamento,
+      id_user,
+      nome,
+      apelido_comum,
+      medida,
+      ml_do_remedio,
+      miligramagem_por_comprimido,
+      quantidade_comprimidos,
+      categoria,
+      tarja
+    );
+
+    return res.status(200).json({
+      message: "Medicamento atualizado com sucesso!"
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-//DELETE "FALSO"
+/*
+|--------------------------------------------------------------------------
+| DELETE
+|--------------------------------------------------------------------------
+*/
+router.delete("/:id", async (req, res) => {
+  const id_user = req.user.id_user;
+  const idMedicamento = req.params.id;
 
-route.delete("/:idMedicamento", async (request, response) => {
-    const {idMedicamento} = request.params;
+  try {
+    await service.deleteMedicamento(idMedicamento, id_user);
 
-    await service.deleteMedicamento(idMedicamento);
-    return response.status(200).send({"message": "Medicamento excluído com sucesso"})
+    return res.status(200).json({
+      message: "Medicamento removido com sucesso!"
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-
-export default route;
-
-/*http://localhost:3306/medicamento*/
+export default router;

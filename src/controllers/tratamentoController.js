@@ -1,56 +1,122 @@
-import express, {request, response} from "express";
+import express from "express";
+import tratamentoService from "../services/tratamentoService.js";
+import { verifyJWT } from "../middlewares/JWT.js";
 
-import service from "../services/tratamentoService.js";
+const router = express.Router();
 
-const route = express.Router();
+router.use(verifyJWT);
 
-//CADASTRAR - POST
-route.post("/", async (request, response) => {
-    try {
-        const { id_user, id_med, id_tarja, data_inicio, data_fim, dosagem } = request.body;
-        await service.createTratamento(id_user, id_med, id_tarja, data_inicio, data_fim, dosagem);
-        return response.status(201).send({ "message": "Tratamento cadastrado com sucesso!" });
-    } catch (error) {
-        console.error("Erro ao cadastrar tratamento:", error);
-        return response.status(500).send({ "message": "Erro ao cadastrar tratamento." });
-    }
+/*
+|--------------------------------------------------------------------------
+| CREATE
+|--------------------------------------------------------------------------
+*/
+router.post("/", async (req, res) => {
+  const id_user = req.user.id_user;
+
+  const {
+    id_med,
+    id_tarja,
+    data_inicio,
+    data_fim,
+    dosagem
+  } = req.body;
+
+  try {
+    await tratamentoService.createTratamento(
+      id_user,
+      id_med,
+      id_tarja,
+      data_inicio,
+      data_fim,
+      dosagem
+    );
+
+    return res.status(201).json({
+      message: "Tratamento criado com sucesso!"
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
+/*
+|--------------------------------------------------------------------------
+| READ
+|--------------------------------------------------------------------------
+*/
+router.get("/", async (req, res) => {
+  const id_user = req.user.id_user;
 
-//LISTAR - GET
-route.get("/", async (request,response) => {
-    const tratamento = await service.listTratamento();
+  try {
+    const tratamentos = await tratamentoService.listTratamento(id_user);
+    return res.status(200).json(tratamentos);
 
-    return response.status(200).send({"message": tratamento});
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
+/*
+|--------------------------------------------------------------------------
+| UPDATE
+|--------------------------------------------------------------------------
+*/
+router.put("/:id", async (req, res) => {
+  const id_user = req.user.id_user;
+  const idTratamento = req.params.id;
 
-//ATUALIZAR - PUT
+  const {
+    id_med,
+    id_tarja,
+    data_inicio,
+    data_fim,
+    dosagem
+  } = req.body;
 
-route.put("/:id", async (request, response) => {
-    try {
-        const { id_user, id_med, id_tarja, data_inicio, data_fim, dosagem } = request.body;
-        const { id } = request.params;
+  try {
+    await tratamentoService.updateTratamento(
+      idTratamento,
+      id_user,
+      id_med,
+      id_tarja,
+      data_inicio,
+      data_fim,
+      dosagem
+    );
 
-        await service.updateTratamento(id_user, id_med, id_tarja, data_inicio, data_fim, dosagem, id);
+    return res.status(200).json({
+      message: "Tratamento atualizado com sucesso!"
+    });
 
-        return response.status(200).send({ "message": "Tratamento atualizado com sucesso!" });
-    } catch (error) {
-        console.error("Erro ao atualizar tratamento:", error);
-        return response.status(500).send({ "message": "Erro ao atualizar tratamento." });
-    }
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-//DELETE "FALSO"
+/*
+|--------------------------------------------------------------------------
+| DELETE
+|--------------------------------------------------------------------------
+*/
+router.delete("/:id", async (req, res) => {
+  const id_user = req.user.id_user;
+  const idTratamento = req.params.id;
 
-route.delete("/:idTratamento", async (request, response) => {
-    const {idTratamento} = request.params;
+  try {
+    await tratamentoService.deleteTratamento(
+      idTratamento,
+      id_user
+    );
 
-    await service.deleteTratamento(idTratamento);
-    return response.status(200).send({"message": "Tratamento excluído com sucesso"})
+    return res.status(200).json({
+      message: "Tratamento removido com sucesso!"
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-
-export default route;
-
-/*http://localhost:3306/tratamento*/
+export default router;

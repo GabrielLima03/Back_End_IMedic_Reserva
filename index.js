@@ -21,6 +21,8 @@ server.use((req, res, next) => {
 
 server.use("/", routes);
 
-server.listen(3333, () => {
-  console.log("O IMEDIC está rodando!");
+const PORT = process.env.PORT || 3333;
+
+server.listen(PORT, () => {
+  console.log(`O IMEDIC está rodando na porta ${PORT}!`);
 });

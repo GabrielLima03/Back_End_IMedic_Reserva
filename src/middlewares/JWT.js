@@ -1,39 +1,35 @@
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../config/auth.js";
 
 function verifyJWT(req, res, next) {
-    const secret = 'Senh@123456'; // Use variável de ambiente em produção!
+  const authHeader = req.headers.authorization;
 
-    const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ message: "Token não informado." });
+  }
 
-    // Verifica se o token foi enviado
-    if (!authHeader) {
-        return res.status(401).json({ message: 'Token não informado.' });
+  const parts = authHeader.split(" ");
+
+  if (parts.length !== 2) {
+    return res.status(401).json({ message: "Token malformado." });
+  }
+
+  const [scheme, token] = parts;
+
+  if (!/^Bearer$/i.test(scheme)) {
+    return res.status(401).json({ message: "Token com esquema inválido." });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({
+        message: "Token inválido ou expirado."
+      });
     }
 
-    // authHeader deve ser no formato: "Bearer <token>"
-    const parts = authHeader.split(' '); // ⚠️ ERRO AQUI NO SEU: você usou '' (string vazia)
-
-    if (parts.length !== 2) {
-        return res.status(401).json({ message: 'Token malformado.' });
-    }
-
-    const [scheme, token] = parts;
-
-    if (!/^Bearer$/i.test(scheme)) {
-        return res.status(401).json({ message: 'Token com esquema inválido.' });
-    }
-
-    // Verifica se o token é válido
-    jwt.verify(token, secret, (err, decoded) => {
-        if (err) {
-            return res.status(401).json({ message: 'Token inválido ou expirado.' });
-        }
-
-        // Armazena os dados decodificados no request (útil para saber quem é o usuário)
-        req.infoUser = decoded.infoUser;
-
-        return next(); // ✅ só chega aqui se tudo deu certo
-    });
+    req.user = decoded;
+    next();
+  });
 }
 
 export { verifyJWT };

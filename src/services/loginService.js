@@ -1,32 +1,73 @@
-import database from '../repository/mysql.js';
+import pool from "../repository/database.js";
+import bcrypt from "bcrypt";
 
+/*
+|--------------------------------------------------------------------------
+| LOGIN
+|--------------------------------------------------------------------------
+*/
 async function login(email, senha) {
+  const sql = `
+    SELECT id_user, nome, email, senha
+    FROM tbl_usuario
+    WHERE email = $1
+      AND deletado = 0
+  `;
 
-    const sql = 'SELECT * FROM tbl_usuario WHERE email= ? AND senha=?';
-    const datalogin = [email, senha];
+  const result = await pool.query(sql, [email]);
 
-    const conn = await database.connectBD();
-    const [rows] = await conn.query(sql, datalogin);
-    conn.end();
-    return rows; 
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const user = result.rows[0];
+
+  const senhaValida = await bcrypt.compare(senha, user.senha);
+
+  if (!senhaValida) {
+    return null;
+  }
+
+  return user;
 }
 
+/*
+|--------------------------------------------------------------------------
+| CHECK EMAIL
+|--------------------------------------------------------------------------
+*/
 async function checkEmail(email) {
-    const sql = 'SELECT * FROM tbl_usuario WHERE email = ?';
+  const sql = `
+    SELECT id_user
+    FROM tbl_usuario
+    WHERE email = $1
+      AND deletado = 0
+  `;
 
-    const conn = await database.connectBD();
-    const [rows] = await conn.query(sql, email);
-    conn.end();
-    return rows;
+  const result = await pool.query(sql, [email]);
+  return result.rows;
 }
 
+/*
+|--------------------------------------------------------------------------
+| CHANGE PASSWORD
+|--------------------------------------------------------------------------
+*/
 async function changePassword(email, newPassword) {
-    const sql = 'UPDATE tbl_usuario SET senha = ? WHERE email = ?';
-    const dataNewPass = [newPassword, email];
+  const senhaHash = await bcrypt.hash(newPassword, 10);
 
-    const conn = await database.connectBD();
-    await conn.query(sql, dataNewPass);
-    conn.end();
+  const sql = `
+    UPDATE tbl_usuario
+    SET senha = $1
+    WHERE email = $2
+      AND deletado = 0
+  `;
+
+  await pool.query(sql, [senhaHash, email]);
 }
 
-export default {checkEmail, changePassword, login};
+export default {
+  login,
+  checkEmail,
+  changePassword
+};

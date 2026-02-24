@@ -1,50 +1,58 @@
-import express, { request, response } from 'express';
-import { generatePassword } from '../helpers/loginActions.js';
-import db from '../services/loginService.js'; // serviço com a lógica de login
-import service from '../services/userService.js'; // serviço com reset de senha
+import express from "express";
+import jwt from "jsonwebtoken";
+import loginService from "../services/loginService.js";
+import { JWT_SECRET } from "../config/auth.js";
 
 const router = express.Router();
 
-// Rota de login
-router.post("/", async (request, response) => {
-    const { email, senha } = request.body;
+/*
+|--------------------------------------------------------------------------
+| LOGIN
+|--------------------------------------------------------------------------
+*/
+router.post("/", async (req, res) => {
+  const { email, senha } = req.body;
 
-    try {
-        const users = await db.login(email, senha);
+  if (!email || !senha) {
+    return res.status(400).json({
+      message: "Email e senha são obrigatórios."
+    });
+  }
 
-        if (users.length > 0) {
-            console.log('✅ Login validado');
-            return response.status(200).json({ message: "Login efetuado com sucesso" });
-        } else {
-            console.log('❌ Erro de validação - login incorreto');
-            return response.status(401).json({ message: "Login incorreto" });
-        }
-    } catch (err) {
-        console.error('❌ Erro no banco de dados:', err);
-        return response.status(500).json({ message: `Houve um erro no banco de dados. ${err}` });
+  try {
+    const user = await loginService.login(email, senha);
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Email ou senha incorretos."
+      });
     }
-});
 
-// Rota de reset de senha
-router.post('/reset', async (request, response) => {
-    const { email } = request.body;
+    const token = jwt.sign(
+      {
+        id_user: user.id_user,
+        email: user.email
+      },
+      JWT_SECRET,
+      { expiresIn: "1d" }
+    );
 
-    try {
-        const users = await service.checkEmail(email);
+    return res.status(200).json({
+      message: "Login realizado com sucesso!",
+      user: {
+        id_user: user.id_user,
+        nome: user.nome,
+        email: user.email
+      },
+      token
+    });
 
-        if (users.length > 0) {
-            const newPassword = generatePassword();
-            await service.changePassword(email, newPassword);
-            console.log(`🔄 Senha redefinida para o e-mail: ${email}`);
-            return response.status(200).json({ message: `Nova senha: ${newPassword}` });
-        } else {
-            console.log(`⚠️ Usuário não encontrado para o e-mail: ${email}`);
-            return response.status(404).json({ message: 'Usuário não encontrado' });
-        }
-    } catch (err) {
-        console.error('❌ Erro ao redefinir senha:', err);
-        return response.status(500).json({ message: `Houve um erro no banco de dados. ${err}` });
-    }
+  } catch (error) {
+    console.error("Erro no login:", error);
+    return res.status(500).json({
+      message: "Erro interno no servidor."
+    });
+  }
 });
 
 export default router;

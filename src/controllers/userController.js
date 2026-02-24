@@ -1,59 +1,110 @@
 import express from "express";
 import service from "../services/userService.js";
+import { verifyJWT } from "../middlewares/JWT.js";
 
-const route = express.Router();
+const router = express.Router();
 
-// Função para converter data de DD/MM/AAAA para YYYY-MM-DD
-function formatarDataBrasileiraParaMySQL(dataBrasileira) {
-    const [dia, mes, ano] = dataBrasileira.split('/');
-    return `${ano}-${mes}-${dia}`;
+// Converter DD/MM/AAAA → YYYY-MM-DD
+function formatarData(dataBrasileira) {
+  const [dia, mes, ano] = dataBrasileira.split("/");
+  return `${ano}-${mes}-${dia}`;
 }
 
-// LISTAR - GET
-route.get("/", async (request, response) => {
-    const users = await service.listUser();
+/*
+|--------------------------------------------------------------------------
+| CRIAR USUÁRIO (registro)
+|--------------------------------------------------------------------------
+*/
+router.post("/", async (req, res) => {
+  try {
+    let { nome, email, data_nasc, senha } = req.body;
 
-    if (users.length < 1) {
-        return response.status(204).end();
+    if (!nome || !email || !data_nasc || !senha) {
+      return res.status(400).json({
+        message: "Todos os campos são obrigatórios."
+      });
     }
-    return response.status(200).send({ message: users });
-});
 
-// CADASTRAR - POST
-route.post("/", async (request, response) => {
-    let { nome, email, data_nasc, senha } = request.body;
-
-    data_nasc = formatarDataBrasileiraParaMySQL(data_nasc);
+    data_nasc = formatarData(data_nasc);
 
     await service.createUser(nome, email, data_nasc, senha);
-    return response.status(201).send({ message: "Usuário cadastrado com sucesso" });
+
+    return res.status(201).json({
+      message: "Usuário cadastrado com sucesso"
+    });
+
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
 });
 
-// TRECHO COM ALTERAÇÃO
-route.get("/teste", async (request, response) => {
-    const idUser = request.query.idUser;
-    const user = await service.getUser(idUser);
+/*
+|--------------------------------------------------------------------------
+| BUSCAR PERFIL DO USUÁRIO LOGADO
+|--------------------------------------------------------------------------
+*/
+router.get("/me", verifyJWT, async (req, res) => {
+  try {
+    const id_user = req.user.id_user;
 
-    return response.status(200).send({ message: user });
+    const user = await service.getUser(id_user);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Usuário não encontrado"
+      });
+    }
+
+    return res.status(200).json(user);
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-// ATUALIZAR - PUT
-route.put('/:idUser', async (request, response) => {
-    let { nome, email, data_nasc, senha } = request.body;
-    const { idUser } = request.params;
+/*
+|--------------------------------------------------------------------------
+| ATUALIZAR PERFIL
+|--------------------------------------------------------------------------
+*/
+router.put("/me", verifyJWT, async (req, res) => {
+  try {
+    const id_user = req.user.id_user;
+    let { nome, email, data_nasc, senha } = req.body;
 
-    data_nasc = formatarDataBrasileiraParaMySQL(data_nasc);
+    if (data_nasc) {
+      data_nasc = formatarData(data_nasc);
+    }
 
-    await service.updateUser(nome, email, data_nasc, senha, idUser);
-    return response.status(200).send({ message: "Dados atualizados com sucesso!" });
+    await service.updateUser(id_user, nome, email, data_nasc, senha);
+
+    return res.status(200).json({
+      message: "Dados atualizados com sucesso"
+    });
+
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
 });
 
-// DELETE
-route.delete('/:idUser', async (request, response) => {
-    const { idUser } = request.params;
+/*
+|--------------------------------------------------------------------------
+| DELETE (soft delete)
+|--------------------------------------------------------------------------
+*/
+router.delete("/me", verifyJWT, async (req, res) => {
+  try {
+    const id_user = req.user.id_user;
 
-    await service.deleteUser(idUser);
-    return response.status(200).send({ message: "Usuário excluído com sucesso" });
+    await service.deleteUser(id_user);
+
+    return res.status(200).json({
+      message: "Usuário excluído com sucesso"
+    });
+
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
 });
 
-export default route;
+export default router;

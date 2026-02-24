@@ -1,43 +1,102 @@
 import express from "express";
-import { criarAlarme, listarAlarmes } from "../services/alarmServices.js";
+import alarmService from "../services/alarmService.js";
+import { verifyJWT } from "../middlewares/JWT.js";
 
 const router = express.Router();
 
-// POST /alarmes - Criar novo alarme
+router.use(verifyJWT);
+
+/*
+|--------------------------------------------------------------------------
+| CREATE
+|--------------------------------------------------------------------------
+*/
 router.post("/", async (req, res) => {
-    try {
-        // Obter os dados diretamente do corpo da requisição
-        const { titulo, descricao, data_hora } = req.body;
+  const { titulo, descricao, data_hora } = req.body;
+  const id_user = req.user.id_user;
 
-        // Verificar se os campos obrigatórios estão presentes
-        if (!titulo || !data_hora) {
-            return res.status(400).json({ error: "Título e data/hora são obrigatórios." });
-        }
+  try {
+    await alarmService.createAlarme(
+      id_user,
+      titulo,
+      descricao,
+      data_hora
+    );
 
-        // Tentar criar o alarme
-        await criarAlarme(titulo, descricao, data_hora);
+    return res.status(201).json({
+      message: "Alarme criado com sucesso!"
+    });
 
-        // Resposta de sucesso
-        res.status(201).json({ message: "✅ Alarme criado com sucesso!" });
-    } catch (error) {
-        // Se ocorrer um erro durante o processo
-        console.error("Erro no controller:", error);
-        if (error.message === "Data inválida") {
-            return res.status(400).json({ error: "Data fornecida é inválida." });
-        }
-        res.status(500).json({ error: "Erro ao salvar alarme." });
-    }
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-// GET /alarmes - Listar todos os alarmes
+/*
+|--------------------------------------------------------------------------
+| READ
+|--------------------------------------------------------------------------
+*/
 router.get("/", async (req, res) => {
-    try {
-        const alarmes = await listarAlarmes();
-        res.json(alarmes);
-    } catch (error) {
-        console.error("Erro ao buscar alarmes:", error);
-        res.status(500).json({ error: "Erro ao buscar alarmes." });
-    }
+  const id_user = req.user.id_user;
+
+  try {
+    const alarmes = await alarmService.listAlarmes(id_user);
+    return res.status(200).json(alarmes);
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| UPDATE
+|--------------------------------------------------------------------------
+*/
+router.put("/:id", async (req, res) => {
+  const id_user = req.user.id_user;
+  const idAlarme = req.params.id;
+
+  const { titulo, descricao, data_hora } = req.body;
+
+  try {
+    await alarmService.updateAlarme(
+      idAlarme,
+      id_user,
+      titulo,
+      descricao,
+      data_hora
+    );
+
+    return res.status(200).json({
+      message: "Alarme atualizado com sucesso!"
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/*
+|--------------------------------------------------------------------------
+| DELETE
+|--------------------------------------------------------------------------
+*/
+router.delete("/:id", async (req, res) => {
+  const id_user = req.user.id_user;
+  const idAlarme = req.params.id;
+
+  try {
+    await alarmService.deleteAlarme(idAlarme, id_user);
+
+    return res.status(200).json({
+      message: "Alarme removido com sucesso!"
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 export default router;
