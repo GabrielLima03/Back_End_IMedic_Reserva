@@ -28,16 +28,6 @@ export async function initDatabase() {
     `);
 
         // =============================
-        // MEDICAMENTOS
-        // =============================
-        await pool.query(`
-      CREATE TABLE IF NOT EXISTS medicamentos (
-        id_med SERIAL PRIMARY KEY,
-        nome VARCHAR(150) NOT NULL
-      );
-    `);
-
-        // =============================
         // TRATAMENTOS
         // =============================
         await pool.query(`

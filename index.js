@@ -1,28 +1,48 @@
 import express from 'express';
-import cors from 'cors'; // 👈 importe o cors
+import cors from 'cors';
 import routes from './routes.js';
+import { initDatabase } from './src/repository/init.js';
 
 const server = express();
 
-server.use(cors()); // 👈 use o middleware do cors
+/*
+|--------------------------------------------------------------------------
+| Middlewares
+|--------------------------------------------------------------------------
+*/
+
+// Cors (já resolve CORS automaticamente)
+server.use(cors());
+
+// Parser JSON
 server.use(express.json());
-server.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  
-  // Preflight request (OPTIONS)
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204); // No Content
-  }
 
-  next();
-});
-
+// Rotas
 server.use("/", routes);
+
+/*
+|--------------------------------------------------------------------------
+| Inicialização do Banco + Servidor
+|--------------------------------------------------------------------------
+*/
 
 const PORT = process.env.PORT || 3333;
 
-server.listen(PORT, () => {
-  console.log(`O IMEDIC está rodando na porta ${PORT}!`);
-});
+async function startServer() {
+  try {
+    console.log("🔄 Inicializando banco de dados...");
+
+    await initDatabase();
+
+    console.log("✅ Banco inicializado com sucesso!");
+
+    server.listen(PORT, () => {
+      console.log(`🚀 O IMEDIC está rodando na porta ${PORT}!`);
+    });
+
+  } catch (error) {
+    console.error("❌ Erro ao iniciar o servidor:", error);
+  }
+}
+
+startServer();
