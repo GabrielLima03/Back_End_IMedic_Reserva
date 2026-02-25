@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import routes from './routes.js';
 import { initDatabase } from './src/repository/init.js';
-import createAdmin from './src/scripts/createAdmin.js';
+import createAdmin from './src/repository/createAdmin.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
