@@ -31,7 +31,7 @@ export async function initDatabase() {
         // TRATAMENTOS
         // =============================
         await pool.query(`
-      CREATE TABLE IF NOT EXISTS tratamentos (
+      CREATE TABLE IF NOT EXISTS tbl_meus_tratamentos (
         id_tratamento SERIAL PRIMARY KEY,
         id_user INTEGER NOT NULL,
         id_med INTEGER NOT NULL,
@@ -62,7 +62,7 @@ export async function initDatabase() {
         // MEDICAMENTOS
         // =============================
         await pool.query(`
-      CREATE TABLE IF NOT EXISTS medicamentos (
+      CREATE TABLE IF NOT EXISTS tbl_medicamentos (
         id_med SERIAL PRIMARY KEY,
         id_user INTEGER NOT NULL,
         nome VARCHAR(150) NOT NULL,

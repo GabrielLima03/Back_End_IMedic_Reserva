@@ -10,7 +10,7 @@ import bcrypt from "bcrypt";
 async function login(email, senha) {
   const sql = `
     SELECT id_user, nome, email, senha
-    FROM usuarios
+    FROM tbl_usuario
     WHERE email = $1
     AND deleted_at IS NULL
   `;
