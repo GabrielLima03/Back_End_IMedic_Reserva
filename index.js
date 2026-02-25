@@ -33,9 +33,8 @@ async function startServer() {
 
     await initDatabase();
 
-    // 👑 Criação automática do admin (segura)
+    // 👑 Criação automática do admin (segura e idempotente)
     await createAdmin();
-    console.log(`Usuario Administrador Criado ✅ ${createAdmin}!!!!!!`)
 
     console.log("✅ Banco inicializado com sucesso!");
 

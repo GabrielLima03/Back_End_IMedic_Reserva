@@ -1,20 +1,19 @@
 import pool from "./database.js";
 import bcrypt from "bcrypt";
 
-async function createAdmin() {
+export default async function createAdmin() {
   try {
     const adminEmail = "adminGabriel@imedic.com";
     const adminSenha = "895233Fu@";
 
-    // Verifica se já existe admin
     const adminExiste = await pool.query(
       "SELECT * FROM tbl_usuario WHERE email = $1",
       [adminEmail]
     );
 
     if (adminExiste.rows.length > 0) {
-      console.log("⚠️ Admin já existe. Nenhuma ação realizada.");
-      process.exit();
+      console.log("⚠️ Admin já existe.");
+      return;
     }
 
     const senhaCriptografada = await bcrypt.hash(adminSenha, 10);
@@ -35,12 +34,8 @@ async function createAdmin() {
     );
 
     console.log("👑 Admin criado com sucesso!");
-    process.exit();
 
   } catch (error) {
     console.error("❌ Erro ao criar admin:", error);
-    process.exit(1);
   }
 }
-
-createAdmin();
