@@ -8,8 +8,9 @@ import bcrypt from "bcrypt";
 */
 
 async function login(email, senha) {
+
   const sql = `
-    SELECT id_user, nome, email, senha
+    SELECT id_user, nome, email, senha, role
     FROM tbl_usuario
     WHERE email = $1
     AND deleted_at IS NULL
@@ -17,60 +18,17 @@ async function login(email, senha) {
 
   const result = await pool.query(sql, [email]);
 
-  if (result.rows.length === 0) {
-    return null;
-  }
+  if (result.rows.length === 0) return null;
 
   const user = result.rows[0];
 
   const senhaValida = await bcrypt.compare(senha, user.senha);
 
-  if (!senhaValida) {
-    return null;
-  }
+  if (!senhaValida) return null;
 
   return user;
 }
 
-/*
-|--------------------------------------------------------------------------
-| CHECK EMAIL
-|--------------------------------------------------------------------------
-*/
-
-async function checkEmail(email) {
-  const sql = `
-    SELECT id_user
-    FROM usuarios
-    WHERE email = $1
-    AND deleted_at IS NULL
-  `;
-
-  const result = await pool.query(sql, [email]);
-  return result.rows;
-}
-
-/*
-|--------------------------------------------------------------------------
-| CHANGE PASSWORD
-|--------------------------------------------------------------------------
-*/
-
-async function changePassword(email, newPassword) {
-  const senhaHash = await bcrypt.hash(newPassword, 10);
-
-  const sql = `
-    UPDATE usuarios
-    SET senha = $1
-    WHERE email = $2
-    AND deleted_at IS NULL
-  `;
-
-  await pool.query(sql, [senhaHash, email]);
-}
-
 export default {
-  login,
-  checkEmail,
-  changePassword
+  login
 };
