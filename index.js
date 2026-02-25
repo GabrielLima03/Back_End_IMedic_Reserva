@@ -3,9 +3,6 @@ import cors from 'cors';
 import routes from './routes.js';
 import { initDatabase } from './src/repository/init.js';
 import createAdmin from './src/repository/createAdmin.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const server = express();
 
@@ -33,7 +30,7 @@ async function startServer() {
 
     await initDatabase();
 
-    // 👑 Criação automática do admin (segura e idempotente)
+    // 👑 Criação automática do admin
     await createAdmin();
 
     console.log("✅ Banco inicializado com sucesso!");
