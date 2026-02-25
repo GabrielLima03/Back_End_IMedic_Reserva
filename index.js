@@ -2,6 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import routes from './routes.js';
 import { initDatabase } from './src/repository/init.js';
+import createAdmin from './src/scripts/createAdmin.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const server = express();
 
@@ -11,13 +15,8 @@ const server = express();
 |--------------------------------------------------------------------------
 */
 
-// Cors (já resolve CORS automaticamente)
 server.use(cors());
-
-// Parser JSON
 server.use(express.json());
-
-// Rotas
 server.use("/", routes);
 
 /*
@@ -33,6 +32,10 @@ async function startServer() {
     console.log("🔄 Inicializando banco de dados...");
 
     await initDatabase();
+
+    // 👑 Criação automática do admin (segura)
+    await createAdmin();
+    console.log(`Usuario Administrador Criado ✅ ${createAdmin}!!!!!!`)
 
     console.log("✅ Banco inicializado com sucesso!");
 

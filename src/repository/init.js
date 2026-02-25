@@ -1,36 +1,37 @@
 import pool from "./database.js";
 
 export async function initDatabase() {
-    try {
-        console.log("🔄 Criando tabelas...");
+  try {
+    console.log("🔄 Criando tabelas...");
 
-        await pool.query(`
-  CREATE TABLE IF NOT EXISTS tbl_usuario (
-    id_user SERIAL PRIMARY KEY,
-    nome VARCHAR(150) NOT NULL,
-    email VARCHAR(150) UNIQUE NOT NULL,
-    data_nasc DATE NOT NULL,
-    senha TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP,
-    deleted_at TIMESTAMP
-  );
+    await pool.query(`
+    CREATE TABLE IF NOT EXISTS tbl_usuario (
+      id_user SERIAL PRIMARY KEY,
+      nome VARCHAR(150) NOT NULL,
+      email VARCHAR(150) UNIQUE NOT NULL,
+      data_nasc DATE NOT NULL,
+      senha TEXT NOT NULL,
+      role VARCHAR(20) DEFAULT 'user',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP,
+      deleted_at TIMESTAMP
+    );
 `);
 
-        // =============================
-        // TARJAS
-        // =============================
-        await pool.query(`
+    // =============================
+    // TARJAS
+    // =============================
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS tarjas (
         id_tarja SERIAL PRIMARY KEY,
-        nome VARCHAR(100) NOT NULL
+        nome VARCHAR(100) NOT NULL UNIQUE
       );
     `);
 
-        // =============================
-        // TRATAMENTOS
-        // =============================
-        await pool.query(`
+    // =============================
+    // TRATAMENTOS
+    // =============================
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS tbl_meus_tratamentos (
         id_tratamento SERIAL PRIMARY KEY,
         id_user INTEGER NOT NULL,
@@ -42,26 +43,26 @@ export async function initDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         deleted_at TIMESTAMP,
 
-        CONSTRAINT fk_user
-          FOREIGN KEY (id_user)
-          REFERENCES usuarios(id_user)
-          ON DELETE CASCADE,
+      CONSTRAINT fk_user
+        FOREIGN KEY (id_user)
+        REFERENCES tbl_usuario(id_user)
+        ON DELETE CASCADE,
 
-        CONSTRAINT fk_med
-          FOREIGN KEY (id_med)
-          REFERENCES medicamentos(id_med)
-          ON DELETE CASCADE,
+      CONSTRAINT fk_med
+        FOREIGN KEY (id_med)
+        REFERENCES tbl_medicamentos(id_med)
+        ON DELETE CASCADE,
 
-        CONSTRAINT fk_tarja
-          FOREIGN KEY (id_tarja)
-          REFERENCES tarjas(id_tarja)
-          ON DELETE CASCADE
+      CONSTRAINT fk_tarja
+        FOREIGN KEY (id_tarja)
+        REFERENCES tarjas(id_tarja)
+        ON DELETE CASCADE
       );
     `);
-        // =============================
-        // MEDICAMENTOS
-        // =============================
-        await pool.query(`
+    // =============================
+    // MEDICAMENTOS
+    // =============================
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS tbl_medicamentos (
         id_med SERIAL PRIMARY KEY,
         id_user INTEGER NOT NULL,
@@ -82,10 +83,11 @@ export async function initDatabase() {
           ON DELETE CASCADE
       );
     `);
-        await pool.query(`
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS alarmes (
         id_alarme SERIAL PRIMARY KEY,
         id_user INTEGER NOT NULL,
+        id_tratamento INTEGER,
         titulo VARCHAR(150) NOT NULL,
         descricao TEXT,
         data_hora TIMESTAMP NOT NULL,
@@ -94,13 +96,18 @@ export async function initDatabase() {
 
         CONSTRAINT fk_user_alarme
           FOREIGN KEY (id_user)
-          REFERENCES usuarios(id_user)
-          ON DELETE CASCADE
-      );
-    `);
+          REFERENCES tbl_usuario(id_user)
+          ON DELETE CASCADE,
 
-        console.log("✅ Todas as tabelas criadas com sucesso!");
-    } catch (error) {
-        console.error("❌ Erro ao criar tabelas:", error);
-    }
+        CONSTRAINT fk_tratamento_alarme
+          FOREIGN KEY (id_tratamento)
+          REFERENCES tbl_meus_tratamentos(id_tratamento)
+          ON DELETE CASCADE
+        );
+      `);
+
+    console.log("✅ Todas as tabelas criadas com sucesso!");
+  } catch (error) {
+    console.error("❌ Erro ao criar tabelas:", error);
+  }
 }
