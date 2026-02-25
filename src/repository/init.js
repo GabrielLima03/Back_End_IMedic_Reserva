@@ -2,17 +2,6 @@ import pool from "./database.js";
 
 export async function initDatabase() {
   try {
-    console.log("🔄 Resetando banco...");
-
-    await pool.query(`
-      DROP TABLE IF EXISTS alarmes CASCADE;
-      DROP TABLE IF EXISTS tbl_meus_tratamentos CASCADE;
-      DROP TABLE IF EXISTS tbl_medicamentos CASCADE;
-      DROP TABLE IF EXISTS tarjas CASCADE;
-      DROP TABLE IF EXISTS tbl_usuario CASCADE;
-    `);
-
-    console.log("🗑 Tabelas antigas removidas.");
     console.log("🔄 Criando tabelas...");
 
     // =============================
