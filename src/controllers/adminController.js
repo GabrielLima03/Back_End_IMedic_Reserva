@@ -6,18 +6,18 @@ import { isAdmin } from "../middlewares/isAdmin.js";
 const router = express.Router();
 
 /*
-|--------------------------------------------------------------------------
-| 👑 DASHBOARD ADMIN
-|--------------------------------------------------------------------------
+👑 Dashboard
 */
 router.get("/dashboard", verifyJWT, isAdmin, async (req, res) => {
+
   try {
+
     const totalUsuarios = await pool.query(
       "SELECT COUNT(*) FROM tbl_usuario WHERE deleted_at IS NULL"
     );
 
     const totalAdmins = await pool.query(
-      "SELECT COUNT(*) FROM tbl_usuario WHERE role = 'admin' AND deleted_at IS NULL"
+      "SELECT COUNT(*) FROM tbl_usuario WHERE role='admin' AND deleted_at IS NULL"
     );
 
     const totalTratamentos = await pool.query(
@@ -32,18 +32,12 @@ router.get("/dashboard", verifyJWT, isAdmin, async (req, res) => {
       "SELECT COUNT(*) FROM alarmes WHERE deleted_at IS NULL"
     );
 
-    const dbStatus = await pool.query("SELECT NOW()");
-
     return res.json({
       sistema: {
         status: "online",
-        ambiente: process.env.NODE_ENV || "production",
         uptime_segundos: process.uptime()
       },
-      banco: {
-        status: "conectado",
-        horario_servidor: dbStatus.rows[0].now
-      },
+
       estatisticas: {
         usuarios: Number(totalUsuarios.rows[0].count),
         admins: Number(totalAdmins.rows[0].count),
@@ -54,149 +48,89 @@ router.get("/dashboard", verifyJWT, isAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Erro ao carregar dashboard." });
+    return res.status(500).json({
+      message: "Erro ao carregar dashboard"
+    });
   }
 });
 
 /*
-|--------------------------------------------------------------------------
-| 👑 Listar todos os usuários
-|--------------------------------------------------------------------------
-*/
-router.get("/usuarios", verifyJWT, isAdmin, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT id_user, nome, email, role, created_at
-       FROM tbl_usuario
-       WHERE deleted_at IS NULL`
-    );
-
-    return res.json(result.rows);
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Erro ao listar usuários." });
-  }
-});
-
-/*
-|--------------------------------------------------------------------------
-| 👑 Buscar usuário por email
-|--------------------------------------------------------------------------
+Busca usuário por email
 */
 router.get("/usuarios/buscar", verifyJWT, isAdmin, async (req, res) => {
-  try {
-    const { email } = req.query;
 
-    if (!email) {
-      return res.status(400).json({
-        message: "Informe um email para busca."
-      });
-    }
+  const { email } = req.query;
 
-    const result = await pool.query(
-      `SELECT id_user, nome, email, role, created_at
-       FROM tbl_usuario
-       WHERE email ILIKE $1
-       AND deleted_at IS NULL`,
-      [`%${email}%`]
-    );
-
-    return res.json(result.rows);
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Erro ao buscar usuário." });
+  if (!email) {
+    return res.status(400).json({
+      message: "Email obrigatório"
+    });
   }
+
+  const result = await pool.query(
+    `SELECT id_user,nome,email,role,created_at
+     FROM tbl_usuario
+     WHERE email ILIKE $1
+     AND deleted_at IS NULL`,
+    [`%${email}%`]
+  );
+
+  return res.json(result.rows);
 });
 
 /*
-|--------------------------------------------------------------------------
-| 👑 Promover usuário para admin
-|--------------------------------------------------------------------------
+Listar usuários
+*/
+router.get("/usuarios", verifyJWT, isAdmin, async (req, res) => {
+
+  const result = await pool.query(
+    `SELECT id_user,nome,email,role,created_at
+     FROM tbl_usuario
+     WHERE deleted_at IS NULL`
+  );
+
+  res.json(result.rows);
+});
+
+/*
+Promover admin
 */
 router.put("/usuarios/:id/promover", verifyJWT, isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    await pool.query(
-      "UPDATE tbl_usuario SET role = 'admin' WHERE id_user = $1",
-      [id]
-    );
+  await pool.query(
+    "UPDATE tbl_usuario SET role='admin' WHERE id_user=$1",
+    [req.params.id]
+  );
 
-    return res.json({ message: "Usuário promovido com sucesso." });
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Erro ao promover usuário." });
-  }
+  res.json({ message: "Usuário promovido" });
 });
 
 /*
-|--------------------------------------------------------------------------
-| 👑 Rebaixar admin para usuário comum
-|--------------------------------------------------------------------------
+Rebaixar admin
 */
 router.put("/usuarios/:id/rebaixar", verifyJWT, isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    await pool.query(
-      "UPDATE tbl_usuario SET role = 'user' WHERE id_user = $1",
-      [id]
-    );
+  await pool.query(
+    "UPDATE tbl_usuario SET role='user' WHERE id_user=$1",
+    [req.params.id]
+  );
 
-    return res.json({ message: "Usuário rebaixado para comum." });
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Erro ao rebaixar usuário." });
-  }
+  res.json({ message: "Usuário rebaixado" });
 });
 
 /*
-|--------------------------------------------------------------------------
-| 👑 Desativar usuário (soft delete)
-|--------------------------------------------------------------------------
+Soft delete
 */
 router.delete("/usuarios/:id", verifyJWT, isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    await pool.query(
-      "UPDATE tbl_usuario SET deleted_at = NOW() WHERE id_user = $1",
-      [id]
-    );
+  await pool.query(
+    `UPDATE tbl_usuario
+     SET deleted_at=NOW()
+     WHERE id_user=$1`,
+    [req.params.id]
+  );
 
-    return res.json({ message: "Usuário desativado com sucesso." });
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Erro ao desativar usuário." });
-  }
-});
-
-/*
-|--------------------------------------------------------------------------
-| 👑 Reativar usuário
-|--------------------------------------------------------------------------
-*/
-router.put("/usuarios/:id/reativar", verifyJWT, isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    await pool.query(
-      "UPDATE tbl_usuario SET deleted_at = NULL WHERE id_user = $1",
-      [id]
-    );
-
-    return res.json({ message: "Usuário reativado com sucesso." });
-
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Erro ao reativar usuário." });
-  }
+  res.json({ message: "Usuário desativado" });
 });
 
 export default router;

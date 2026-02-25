@@ -1,47 +1,10 @@
 import pool from "../repository/database.js";
 import bcrypt from "bcrypt";
 
-/*
-|--------------------------------------------------------------------------
-| LISTAR (ADMIN FUTURO)
-|--------------------------------------------------------------------------
-*/
-async function listUser() {
-  const sql = `
-    SELECT id_user, nome, email, data_nasc
-    FROM tbl_usuario
-    WHERE deletado = 0
-  `;
-  const result = await pool.query(sql);
-  return result.rows;
-}
-
-/*
-|--------------------------------------------------------------------------
-| BUSCAR POR ID
-|--------------------------------------------------------------------------
-*/
-async function getUser(idUser) {
-  const sql = `
-    SELECT id_user, nome, email, data_nasc
-    FROM tbl_usuario
-    WHERE deletado = 0 AND id_user = $1
-  `;
-
-  const result = await pool.query(sql, [idUser]);
-
-  return result.rows[0] || null;
-}
-
-/*
-|--------------------------------------------------------------------------
-| CRIAR
-|--------------------------------------------------------------------------
-*/
 async function createUser(nome, email, data_nasc, senha) {
-  // Verificar se email já existe
+
   const emailCheck = await pool.query(
-    "SELECT 1 FROM tbl_usuario WHERE email = $1",
+    "SELECT 1 FROM tbl_usuario WHERE email = $1 AND deleted_at IS NULL",
     [email]
   );
 
@@ -51,19 +14,26 @@ async function createUser(nome, email, data_nasc, senha) {
 
   const senhaHash = await bcrypt.hash(senha, 10);
 
-  const sql = `
-    INSERT INTO tbl_usuario (nome, email, data_nasc, senha)
-    VALUES ($1, $2, $3, $4)
-  `;
-
-  await pool.query(sql, [nome, email, data_nasc, senhaHash]);
+  await pool.query(
+    `INSERT INTO tbl_usuario (nome, email, data_nasc, senha)
+     VALUES ($1,$2,$3,$4)`,
+    [nome, email, data_nasc, senhaHash]
+  );
 }
 
-/*
-|--------------------------------------------------------------------------
-| ATUALIZAR
-|--------------------------------------------------------------------------
-*/
+async function getUser(idUser) {
+
+  const result = await pool.query(
+    `SELECT id_user,nome,email,data_nasc,role
+     FROM tbl_usuario
+     WHERE id_user=$1
+     AND deleted_at IS NULL`,
+    [idUser]
+  );
+
+  return result.rows[0] || null;
+}
+
 async function updateUser(idUser, nome, email, data_nasc, senha) {
 
   const campos = [];
@@ -86,14 +56,12 @@ async function updateUser(idUser, nome, email, data_nasc, senha) {
   }
 
   if (senha) {
-    const senhaHash = await bcrypt.hash(senha, 10);
+    const hash = await bcrypt.hash(senha, 10);
     campos.push(`senha = $${index++}`);
-    valores.push(senhaHash);
+    valores.push(hash);
   }
 
-  if (campos.length === 0) {
-    throw new Error("Nenhum campo para atualizar.");
-  }
+  if (!campos.length) throw new Error("Nenhum campo para atualizar.");
 
   const sql = `
     UPDATE tbl_usuario
@@ -106,25 +74,19 @@ async function updateUser(idUser, nome, email, data_nasc, senha) {
   await pool.query(sql, valores);
 }
 
-/*
-|--------------------------------------------------------------------------
-| DELETE (soft delete)
-|--------------------------------------------------------------------------
-*/
 async function deleteUser(idUser) {
-  const sql = `
-    UPDATE tbl_usuario
-    SET deletado = 1
-    WHERE id_user = $1
-  `;
 
-  await pool.query(sql, [idUser]);
+  await pool.query(
+    `UPDATE tbl_usuario
+     SET deleted_at = NOW()
+     WHERE id_user=$1`,
+    [idUser]
+  );
 }
 
 export default {
   createUser,
   updateUser,
-  listUser,
-  deleteUser,
-  getUser
+  getUser,
+  deleteUser
 };
