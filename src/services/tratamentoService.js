@@ -1,10 +1,8 @@
 import pool from "../repository/database.js";
 
-/*
-|--------------------------------------------------------------------------
-| CREATE
-|--------------------------------------------------------------------------
-*/
+/* ============================
+   CREATE
+============================ */
 async function createTratamento(
   idUser,
   idMed,
@@ -29,29 +27,35 @@ async function createTratamento(
   ]);
 }
 
-/*
-|--------------------------------------------------------------------------
-| READ (somente do usuário logado)
-|--------------------------------------------------------------------------
-*/
-async function listTratamento(idUser) {
+/* ============================
+   LIST
+============================ */
+async function listTratamentos(idUser) {
   const sql = `
-    SELECT *
-    FROM tbl_meus_tratamentos
-    WHERE id_user = $1
-      AND deletado = 0
-    ORDER BY data_inicio ASC
+    SELECT 
+      t.id_tratamento,
+      t.id_med,
+      t.id_tarja,
+      t.data_inicio,
+      t.data_fim,
+      t.dosagem,
+      m.nome AS nome_remedio,
+      tj.nome AS nome_tarja
+    FROM tbl_meus_tratamentos t
+    JOIN tbl_medicamentos m ON m.id_med = t.id_med
+    JOIN tarjas tj ON tj.id_tarja = t.id_tarja
+    WHERE t.id_user = $1
+      AND t.deleted_at IS NULL
+    ORDER BY t.data_inicio ASC
   `;
 
   const result = await pool.query(sql, [idUser]);
   return result.rows;
 }
 
-/*
-|--------------------------------------------------------------------------
-| UPDATE (proteção por usuário)
-|--------------------------------------------------------------------------
-*/
+/* ============================
+   UPDATE
+============================ */
 async function updateTratamento(
   idTratamento,
   idUser,
@@ -67,7 +71,8 @@ async function updateTratamento(
         id_tarja = $2,
         data_inicio = $3,
         data_fim = $4,
-        dosagem = $5
+        dosagem = $5,
+        updated_at = CURRENT_TIMESTAMP
     WHERE id_tratamento = $6
       AND id_user = $7
   `;
@@ -83,15 +88,13 @@ async function updateTratamento(
   ]);
 }
 
-/*
-|--------------------------------------------------------------------------
-| DELETE (soft delete protegido)
-|--------------------------------------------------------------------------
-*/
+/* ============================
+   DELETE (SOFT)
+============================ */
 async function deleteTratamento(idTratamento, idUser) {
   const sql = `
     UPDATE tbl_meus_tratamentos
-    SET deletado = 1
+    SET deleted_at = CURRENT_TIMESTAMP
     WHERE id_tratamento = $1
       AND id_user = $2
   `;
@@ -101,7 +104,7 @@ async function deleteTratamento(idTratamento, idUser) {
 
 export default {
   createTratamento,
-  listTratamento,
+  listTratamentos,
   updateTratamento,
   deleteTratamento
 };
